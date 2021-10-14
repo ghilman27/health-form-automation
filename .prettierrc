@@ -1,6 +1,9 @@
 {
   "singleQuote": true,
   "trailingComma": "all",
+  "tabWidth": 2,
+  "printWidth": 80,
+  "proseWrap": "preserve",
   "overrides": [
     {
       "files": "*.ts",
