@@ -22,16 +22,16 @@ app.use(express.json());
 app.use(morgan('combined'));
 
 app.post('/', async (req, res, next) => {
-  const { questions } = req.body;
+  const { questions, formUrl } = req.body;
 
   try {
     const screenshotPath = await fillHealthForm(
-      process.env.FORM_URL,
+      formUrl as string,
       questions as QuestionTemplate[],
       {
-        headless: process.env.NODE_ENV === 'dev' ? false : true,
-        screenshot: process.env.NODE_ENV === 'dev' ? false : true,
-        submit: process.env.NODE_ENV === 'dev' ? false : true,
+        headless: process.env.NODE_ENV !== 'production' ? false : true,
+        screenshot: process.env.NODE_ENV !== 'production' ? false : true,
+        submit: process.env.NODE_ENV !== 'production' ? false : true,
       },
     );
     res.status(201).send(screenshotPath);
