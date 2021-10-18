@@ -3,6 +3,7 @@ build
 .git
 .gitignore
 .env
+.env.dev
 ignore
 screenshots
 .vscode
