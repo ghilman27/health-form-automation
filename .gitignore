@@ -29,3 +29,4 @@ build/
 .DS_Store
 ignore/
 screenshots/
+.env

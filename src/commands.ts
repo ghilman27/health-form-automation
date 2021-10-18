@@ -1,5 +1,5 @@
-import { Page } from 'puppeteer';
-import { BrowserCommand } from './browser';
+import { Page } from 'puppeteer-core';
+import { BrowserCommand } from './types';
 
 export class AgreeTermsCommand implements BrowserCommand<void> {
   private nextPageBtnSelector = 'span[aria-label="Next page"]';

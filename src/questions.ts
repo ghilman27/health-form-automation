@@ -1,5 +1,5 @@
-import { Page } from 'puppeteer';
-import { BrowserCommand } from './browser';
+import { Page } from 'puppeteer-core';
+import { BrowserCommand } from './types';
 
 export type QuestionConstructor = new (template: QuestionTemplate) => Question;
 
