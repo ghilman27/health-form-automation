@@ -12,6 +12,7 @@ ENV NODE_ENV=production
 COPY --from=ts-compiler /usr/app/package*.json ./
 RUN npm install --only=production
 COPY --from=ts-compiler /usr/app/build ./build
+RUN mkdir build/screenshots
 ENV NODE_ENV=production
 ENV PORT=5000
 EXPOSE 5000
