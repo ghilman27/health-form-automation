@@ -1,0 +1,29 @@
+version: '3.3'
+services:
+  chrome:
+    image: zenika/alpine-chrome:80
+    container_name: chrome
+    entrypoint: ["chromium-browser", "--headless", "--disable-gpu", "--disable-software-rasterizer", "--disable-dev-shm-usage", "--no-sandbox", "--remote-debugging-address=0.0.0.0", "--remote-debugging-port=9222"]
+    networks:
+      - health-form-test
+    
+  healthform:
+    image: healthform:test
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: npm run start:watch
+    depends_on:
+      - chrome
+    networks:
+      - health-form-test
+    volumes:
+      - ./:/usr/app
+    env_file:
+      - .env
+    ports:
+      - 5000:5000
+
+networks:
+  health-form-test:
+
