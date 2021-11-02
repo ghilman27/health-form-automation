@@ -11,8 +11,10 @@ import {
 
 export default class WhatsApp {
   public conn: WAConnection;
+  public totalProcess: number; // total running process, don't close if there are still running processes
 
   constructor() {
+    this.totalProcess = 0;
     this.conn = new WAConnection(); // instantiate
     this.conn.version = [3, 3234, 9];
     this.conn.autoReconnect = ReconnectMode.onConnectionLost; // only automatically reconnect when the connection breaks
@@ -57,21 +59,23 @@ export default class WhatsApp {
     return groupMessages.messages;
   };
 
-  reportHealthForm = async (
-    jid: string,
-    name: string,
-  ): Promise<string> => {
+  reportHealthForm = async (jid: string, name: string): Promise<string> => {
     const messages = await this.loadMessages(jid, 100);
     const formMessage = this._findTodayLatestFormMessage(messages);
     const filledFormMessage = this._fillFormMessage(formMessage, name);
 
-    setTimeout(async () => {
-      await this.conn.chatRead(jid); // mark chat read
-      await this.conn.updatePresence(jid, Presence.available) // tell them we're available
-      await this.conn.updatePresence(jid, Presence.composing) // tell them we're composing
-      const response = await this.conn.sendMessage(jid, filledFormMessage, MessageType.text);
-      return response;
-    }, 3 * 1000);
+    console.log('sending report to whatsapp');
+    await this.conn.chatRead(jid); // mark chat read
+    await this.conn.updatePresence(jid, Presence.available); // tell them we're available
+    await this.conn.updatePresence(jid, Presence.composing); // tell them we're composing
+    const response = await this.conn.sendMessage(
+      jid,
+      filledFormMessage,
+      MessageType.text,
+    );
+    console.log(
+      `sent message with ID "${response.key.id}" to recipient ${jid} successfully`,
+    );
 
     return filledFormMessage;
   };
@@ -79,18 +83,18 @@ export default class WhatsApp {
   _findTodayLatestFormMessage = (messages: proto.WebMessageInfo[]): string => {
     const linkRegex = /https:\/\/bit\.ly\/ASII_2020/;
     const startOfToday = new Date().setUTCHours(-7, 0, 0, 0) / 1000;
-    
+
     for (let idx = messages.length - 1; idx >= 0; idx--) {
       const { message, messageTimestamp } = messages[idx];
-      
+
       if (messageTimestamp < startOfToday) {
         continue;
       }
-      
+
       if (!message) {
         continue;
       }
-      
+
       const { extendedTextMessage = {}, conversation = '' } = message;
 
       if (linkRegex.test(extendedTextMessage.text)) {

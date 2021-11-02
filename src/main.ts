@@ -27,12 +27,24 @@ const createApp = (
   });
 
   const reportToWA = async (jid: string, name: string) => {
+    if (whatsapp.conn.state === 'close') {
+      await whatsapp.connect();
+    }
     if (whatsapp.conn.state === 'connecting') {
-      console.log('Whatsapp State: Reconnecting. Wait for another 3 seconds');
+      console.log('Whatsapp state: connecting. Wait for another 3 seconds');
       setTimeout(reportToWA, 3 * 1000);
       return;
     }
-    await whatsapp.reportHealthForm(jid, name);
+
+    try {
+      whatsapp.totalProcess++;
+      await whatsapp.reportHealthForm(jid, name);
+    } finally {
+      whatsapp.totalProcess--;
+      if (whatsapp.totalProcess === 0) {
+        whatsapp.close();
+      }
+    }
   };
 
   const app = express();
@@ -57,22 +69,15 @@ const createApp = (
 
       res.status(201).send(screenshotPath);
 
-      setTimeout(
-        async () =>
-          nodemailer.sendHealthFormEmail(
-            targetEmail,
-            screenshotPath,
-            questions,
-          ),
-        0,
+      // send report to email
+      await nodemailer.sendHealthFormEmail(
+        targetEmail,
+        screenshotPath,
+        questions,
       );
 
-      setTimeout(async () => {
-        if (whatsapp.conn.state === 'close') {
-          await whatsapp.connect();
-        }
-        await reportToWA(reportWhatsapp, reportName);
-      }, 0);
+      // send report to whatsapp
+      await reportToWA(reportWhatsapp, reportName);
     } catch (error) {
       next(error);
     }
