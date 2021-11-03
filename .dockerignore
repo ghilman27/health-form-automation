@@ -7,3 +7,4 @@ build
 ignore
 screenshots
 .vscode
+auth_info.json
