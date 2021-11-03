@@ -1,3 +1,4 @@
+import * as util from 'util';
 import { QuestionConstructor, QuestionTemplate, Question } from './questions';
 
 interface QuestionConstructors {
@@ -21,4 +22,10 @@ export const createQuestions = (
 ): Question[] => {
   const createQuestion = questionBuilder(constructors);
   return [...templates.map((template) => createQuestion(template))];
+};
+
+export const consoleLog = (object: unknown): void => {
+  console.log(
+    util.inspect(object, { showHidden: false, depth: null, colors: true }),
+  );
 };

@@ -12,6 +12,7 @@ import { fillHealthForm } from './form';
 import { QuestionTemplate } from './questions';
 import WhatsApp from './whatsapp';
 import NodeMailer from './nodemailer';
+import { consoleLog } from './utils';
 
 const createApp = (
   browser: puppeteer.Browser,
@@ -101,9 +102,9 @@ const createApp = (
             screenshot: screenshotPath,
           },
         },
-      }
-      
-      console.log(response);
+      };
+
+      consoleLog(response);
       res.status(201).json(response);
     } catch (error) {
       error.deliveryStatus = {
@@ -145,25 +146,29 @@ const createApp = (
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((error, _req, res, _next) => {
     console.error(error);
-    
+
     if (error.deliveryStatus) {
-      console.log(error.deliveryStatus);
+      consoleLog(error.deliveryStatus);
     }
 
     if (error.message === 'No Unfilled Form Found') {
-      res.status(404).json({
+      const description = {
         code: 404,
         message: error.message,
         status: 'failed',
         deliveryStatus: error.deliveryStatus || {},
-      });
+      };
+      res.status(404).json(description);
+      nodemailer.sendError(process.env.DEVELOPER_EMAIL, error, description);
     } else {
-      res.status(500).json({
+      const description = {
         code: 500,
         message: 'Internal Server Error',
         status: 'error',
         deliveryStatus: error.deliveryStatus || {},
-      });
+      };
+      res.status(500).json();
+      nodemailer.sendError(process.env.DEVELOPER_EMAIL, error, description);
     }
   });
 
@@ -183,7 +188,15 @@ const init = async () => {
   });
 
   const whatsapp = new WhatsApp();
-  const nodemailer = new NodeMailer();
+  const nodemailer = new NodeMailer({
+    host: process.env.MAIL_HOST,
+    port: parseInt(process.env.MAIL_PORT),
+    secure: true,
+    auth: {
+      user: process.env.MAIL_ADDRESS,
+      pass: process.env.MAIL_PASSWORD,
+    },
+  });
   const app = createApp(browser, whatsapp, nodemailer);
 
   app.listen(parseInt(process.env.PORT), '0.0.0.0', () => {
