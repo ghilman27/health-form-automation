@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import * as nodemailer from 'nodemailer';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
 
@@ -23,7 +24,7 @@ export default class NodeMailer {
       attachments: [
         {
           filename: 'screenshot.png',
-          content: fs.createReadStream(screenshotPath),
+          content: fs.createReadStream(path.join(__dirname, `../${screenshotPath}`)),
         },
       ],
     });

@@ -8,6 +8,7 @@ import {
   waChatKey,
   MessageType,
 } from '@adiwajshing/baileys';
+import * as path from 'path';
 
 export default class WhatsApp {
   public conn: WAConnection;
@@ -38,8 +39,8 @@ export default class WhatsApp {
   }
 
   connect = async (): Promise<WhatsApp> => {
-    fs.existsSync('./auth_info.json') &&
-      this.conn.loadAuthInfo('./auth_info.json');
+    fs.existsSync(path.join(__dirname, '../auth_info.json')) &&
+      this.conn.loadAuthInfo(path.join(__dirname, '../auth_info.json'));
     await this.conn.connect();
     const authInfo = this.conn.base64EncodedAuthInfo();
     fs.writeFileSync('./auth_info.json', JSON.stringify(authInfo, null, '\t'));

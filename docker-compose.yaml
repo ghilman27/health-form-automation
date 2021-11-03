@@ -8,7 +8,7 @@ services:
       - health-form-test
     
   healthform:
-    image: healthform:test
+    image: healthform:whatsapp-test
     build:
       context: .
       dockerfile: Dockerfile
@@ -19,8 +19,8 @@ services:
     volumes:
       - ./screenshots:/usr/app/build/screenshots
       - ./auth_info.json:/usr/app/build/auth_info.json
-    environment:
-      BROWSER_URL: http://chrome:9222
+    env_file:
+      - .env
     ports:
       - 5000:5000
 
