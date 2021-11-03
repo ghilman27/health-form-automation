@@ -10,8 +10,15 @@ dotenv.config();
 
 import { fillHealthForm } from './form';
 import { QuestionTemplate } from './questions';
+import WhatsApp from './whatsapp';
+import NodeMailer from './nodemailer';
+import { consoleLog } from './utils';
 
-const createApp = (browser: puppeteer.Browser): express.Express => {
+const createApp = (
+  browser: puppeteer.Browser,
+  whatsapp: WhatsApp,
+  nodemailer: NodeMailer,
+): express.Express => {
   morgan.token('date', () => {
     const p = new Date()
       .toString()
@@ -20,16 +27,41 @@ const createApp = (browser: puppeteer.Browser): express.Express => {
     return `${p[2]}/${p[1]}/${p[3]}:${p[4]} ${p[5]}`;
   });
 
+  const reportToWA = async (jid: string, name: string): Promise<string> => {
+    if (whatsapp.conn.state === 'close') {
+      await whatsapp.connect();
+    }
+
+    try {
+      whatsapp.totalProcess++;
+      const message = await whatsapp.reportHealthForm(jid, name);
+      return message;
+    } finally {
+      whatsapp.totalProcess--;
+      if (whatsapp.totalProcess === 0) {
+        whatsapp.close();
+      }
+    }
+  };
+
   const app = express();
 
   app.use(express.json());
   app.use(morgan('combined'));
 
   app.post('/', async (req, res, next) => {
-    const { questions, formUrl } = req.body;
+    const { questions, formUrl, targetEmail, reportName, reportWhatsapp } =
+      req.body;
+    const status = {
+      email: false,
+      form: false,
+      whatsapp: false,
+    };
+    let waMessage: string;
+    let screenshotPath: string;
 
     try {
-      const screenshotPath = await fillHealthForm(
+      screenshotPath = await fillHealthForm(
         browser,
         formUrl as string,
         questions as QuestionTemplate[],
@@ -38,8 +70,55 @@ const createApp = (browser: puppeteer.Browser): express.Express => {
           submit: process.env.NODE_ENV !== 'production' ? false : true,
         },
       );
-      res.status(201).send(screenshotPath);
+      status.form = true;
+
+      // send report to email
+      await nodemailer.sendHealthFormEmail(
+        targetEmail,
+        screenshotPath,
+        questions,
+      );
+      status.email = true;
+
+      // send report to whatsapp
+      waMessage = await reportToWA(reportWhatsapp, reportName);
+      status.whatsapp = true;
+
+      const response = {
+        code: 201,
+        status: 'success',
+        message: 'Form has been successfully delivered',
+        deliveryStatus: {
+          whatsapp: {
+            status: 'delivered',
+            message: waMessage,
+          },
+          email: {
+            status: 'delivered',
+          },
+          form: {
+            status: 'delivered',
+            questions: questions,
+            screenshot: screenshotPath,
+          },
+        },
+      };
+
+      consoleLog(response);
+      res.status(201).json(response);
     } catch (error) {
+      error.deliveryStatus = {
+        whatsapp: {
+          status: status.whatsapp ? 'delivered' : 'failed',
+          message: waMessage || '',
+        },
+        email: { status: status.email ? 'delivered' : 'failed' },
+        form: {
+          status: status.form ? 'delivered' : 'failed',
+          questions: questions,
+          screenshot: screenshotPath,
+        },
+      };
       next(error);
     }
   });
@@ -50,6 +129,46 @@ const createApp = (browser: puppeteer.Browser): express.Express => {
       res.sendFile(path.join(__dirname, `../screenshots/${fileName}`));
     } catch (error) {
       next(error);
+    }
+  });
+
+  app.get('/whatsapp/reconnect', async (_req, _res, next) => {
+    try {
+      if (whatsapp.conn.state !== 'close') {
+        whatsapp.close();
+      }
+      await whatsapp.connect();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  app.use((error, _req, res, _next) => {
+    console.error(error);
+
+    if (error.deliveryStatus) {
+      consoleLog(error.deliveryStatus);
+    }
+
+    if (error.message === 'No Unfilled Form Found') {
+      const description = {
+        code: 404,
+        message: error.message,
+        status: 'failed',
+        deliveryStatus: error.deliveryStatus || {},
+      };
+      res.status(404).json(description);
+      nodemailer.sendError(process.env.DEVELOPER_EMAIL, error, description);
+    } else {
+      const description = {
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'error',
+        deliveryStatus: error.deliveryStatus || {},
+      };
+      res.status(500).json();
+      nodemailer.sendError(process.env.DEVELOPER_EMAIL, error, description);
     }
   });
 
@@ -68,7 +187,17 @@ const init = async () => {
     },
   });
 
-  const app = createApp(browser);
+  const whatsapp = new WhatsApp();
+  const nodemailer = new NodeMailer({
+    host: process.env.MAIL_HOST,
+    port: parseInt(process.env.MAIL_PORT),
+    secure: true,
+    auth: {
+      user: process.env.MAIL_ADDRESS,
+      pass: process.env.MAIL_PASSWORD,
+    },
+  });
+  const app = createApp(browser, whatsapp, nodemailer);
 
   app.listen(parseInt(process.env.PORT), '0.0.0.0', () => {
     console.log(`Running on port: ${process.env.PORT}`);

@@ -30,3 +30,4 @@ build/
 ignore/
 screenshots/
 .env
+auth_info.json
