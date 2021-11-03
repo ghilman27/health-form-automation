@@ -18,6 +18,7 @@ services:
       - health-form-test
     volumes:
       - ./screenshots:/usr/app/build/screenshots
+      - ./auth_info.json:/usr/app/build/auth_info.json
     environment:
       BROWSER_URL: http://chrome:9222
     ports:
