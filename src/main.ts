@@ -26,19 +26,15 @@ const createApp = (
     return `${p[2]}/${p[1]}/${p[3]}:${p[4]} ${p[5]}`;
   });
 
-  const reportToWA = async (jid: string, name: string) => {
+  const reportToWA = async (jid: string, name: string): Promise<string> => {
     if (whatsapp.conn.state === 'close') {
       await whatsapp.connect();
-    }
-    if (whatsapp.conn.state === 'connecting') {
-      console.log('Whatsapp state: connecting. Wait for another 3 seconds');
-      setTimeout(reportToWA, 3 * 1000);
-      return;
     }
 
     try {
       whatsapp.totalProcess++;
-      await whatsapp.reportHealthForm(jid, name);
+      const message = await whatsapp.reportHealthForm(jid, name);
+      return message;
     } finally {
       whatsapp.totalProcess--;
       if (whatsapp.totalProcess === 0) {
@@ -55,9 +51,16 @@ const createApp = (
   app.post('/', async (req, res, next) => {
     const { questions, formUrl, targetEmail, reportName, reportWhatsapp } =
       req.body;
+    const status = {
+      email: false,
+      form: false,
+      whatsapp: false,
+    };
+    let waMessage: string;
+    let screenshotPath: string;
 
     try {
-      const screenshotPath = await fillHealthForm(
+      screenshotPath = await fillHealthForm(
         browser,
         formUrl as string,
         questions as QuestionTemplate[],
@@ -66,8 +69,7 @@ const createApp = (
           submit: process.env.NODE_ENV !== 'production' ? false : true,
         },
       );
-
-      res.status(201).send(screenshotPath);
+      status.form = true;
 
       // send report to email
       await nodemailer.sendHealthFormEmail(
@@ -75,10 +77,47 @@ const createApp = (
         screenshotPath,
         questions,
       );
+      status.email = true;
 
       // send report to whatsapp
-      await reportToWA(reportWhatsapp, reportName);
+      waMessage = await reportToWA(reportWhatsapp, reportName);
+      status.whatsapp = true;
+
+      const response = {
+        code: 201,
+        status: 'success',
+        message: 'Form has been successfully delivered',
+        deliveryStatus: {
+          whatsapp: {
+            status: 'delivered',
+            message: waMessage,
+          },
+          email: {
+            status: 'delivered',
+          },
+          form: {
+            status: 'delivered',
+            questions: questions,
+            screenshot: screenshotPath,
+          },
+        },
+      }
+      
+      console.log(response);
+      res.status(201).json(response);
     } catch (error) {
+      error.deliveryStatus = {
+        whatsapp: {
+          status: status.whatsapp ? 'delivered' : 'failed',
+          message: waMessage || '',
+        },
+        email: { status: status.email ? 'delivered' : 'failed' },
+        form: {
+          status: status.form ? 'delivered' : 'failed',
+          questions: questions,
+          screenshot: screenshotPath,
+        },
+      };
       next(error);
     }
   });
@@ -105,10 +144,26 @@ const createApp = (
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((error, _req, res, _next) => {
+    console.error(error);
+    
+    if (error.deliveryStatus) {
+      console.log(error.deliveryStatus);
+    }
+
     if (error.message === 'No Unfilled Form Found') {
-      res.status(404).send(error.message);
+      res.status(404).json({
+        code: 404,
+        message: error.message,
+        status: 'failed',
+        deliveryStatus: error.deliveryStatus || {},
+      });
     } else {
-      res.status(500).send('Internal Server Error');
+      res.status(500).json({
+        code: 500,
+        message: 'Internal Server Error',
+        status: 'error',
+        deliveryStatus: error.deliveryStatus || {},
+      });
     }
   });
 
