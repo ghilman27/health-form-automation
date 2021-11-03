@@ -61,6 +61,7 @@ const createApp = (
     let screenshotPath: string;
 
     try {
+      console.log(`filling the form ${formUrl} ...`);
       screenshotPath = await fillHealthForm(
         browser,
         formUrl as string,
@@ -71,18 +72,23 @@ const createApp = (
         },
       );
       status.form = true;
+      console.log(`filling the form success`);
 
       // send report to email
+      console.log(`reporting form to email  ... ${targetEmail}`);
       await nodemailer.sendHealthFormEmail(
         targetEmail,
         screenshotPath,
         questions,
       );
       status.email = true;
+      console.log('reporting form to email success');
 
       // send report to whatsapp
+      console.log(`reporting form to whatsapp ${reportWhatsapp} as ${reportName} ...`);
       waMessage = await reportToWA(reportWhatsapp, reportName);
       status.whatsapp = true;
+      console.log('reporting form to whatsapp success');
 
       const response = {
         code: 201,

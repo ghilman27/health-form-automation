@@ -15,7 +15,6 @@ export default class NodeMailer {
     screenshotPath: string,
     healthForm: Record<string, unknown> = {},
   ): Promise<SMTPTransport.SentMessageInfo> {
-    console.log('reporting health form to email');
     return this._transporter.sendMail({
       from: "Fatih's Assistant",
       to: targetEmail,

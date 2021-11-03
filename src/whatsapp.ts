@@ -65,7 +65,6 @@ export default class WhatsApp {
     const formMessage = this._findTodayLatestFormMessage(messages);
     const filledFormMessage = this._fillFormMessage(formMessage, name);
 
-    console.log('sending report to whatsapp');
     // await this.conn.chatRead(jid); // mark chat read
     await this.conn.updatePresence(jid, Presence.available); // tell them we're available
     await this.conn.updatePresence(jid, Presence.composing); // tell them we're composing
@@ -98,11 +97,17 @@ export default class WhatsApp {
 
       const messageType = Object.keys(message)[0];
 
-      if (messageType === MessageType.extendedText && linkRegex.test(message.extendedTextMessage.text)) {
+      if (
+        messageType === MessageType.extendedText &&
+        linkRegex.test(message.extendedTextMessage.text)
+      ) {
         return message.extendedTextMessage.text;
       }
 
-      if (messageType === MessageType.text && linkRegex.test(message.conversation)) {
+      if (
+        messageType === MessageType.text &&
+        linkRegex.test(message.conversation)
+      ) {
         return message.conversation;
       }
     }
