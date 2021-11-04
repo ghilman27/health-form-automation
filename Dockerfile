@@ -7,6 +7,8 @@ COPY . ./
 RUN npm run build
 
 FROM node:14.17.5-alpine AS ts-remover
+RUN apk add --no-cache tzdata
+ENV TZ Asia/Jakarta
 WORKDIR /usr/app
 ENV NODE_ENV=production
 COPY --from=ts-compiler /usr/app/package.json ./

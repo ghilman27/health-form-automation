@@ -15,10 +15,17 @@ export default class NodeMailer {
     screenshotPath: string,
     healthForm: Record<string, unknown> = {},
   ): Promise<SMTPTransport.SentMessageInfo> {
+    const currentDate = new Date().toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric', 
+      timeZone: 'Asia/Jakarta'
+    });
+
     return this._transporter.sendMail({
       from: "Fatih's Assistant",
       to: targetEmail,
-      subject: `Fill Heatlh Form ${new Date().toLocaleDateString()}`,
+      subject: `Fill Heatlh Form ${currentDate}`,
       html: `<p>The health form has been filled successfully <br/><br/> <pre>${JSON.stringify(healthForm, null, 4)}</pre></p>`,
       attachments: [
         {
@@ -35,10 +42,18 @@ export default class NodeMailer {
     description: Record<string, unknown> = {},
   ): Promise<SMTPTransport.SentMessageInfo> {
     console.log('reporting error to email');
+
+    const currentTime = new Date().toLocaleString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric', 
+      timeZone: 'Asia/Jakarta'
+    });
+
     return this._transporter.sendMail({
       from: "Fatih's Assistant",
       to: targetEmail,
-      subject: `Error: Fill Health Form ${new Date().toLocaleString()}`,
+      subject: `Error: Fill Health Form ${currentTime}`,
       html: `<p>We found error with description: <br/><br/> <pre>${JSON.stringify(description, null, 4)}</pre> <br/><br/> Error stack: <br/><br/> <pre>${error.stack}</pre></p>`,
     });
   }

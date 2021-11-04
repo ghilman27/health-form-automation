@@ -134,8 +134,10 @@ export default class WhatsApp {
     const currentDate = new Date().toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'long',
-      year: 'numeric',
+      year: 'numeric', 
+      timeZone: 'Asia/Jakarta'
     });
+
     return `Tim Data Management ${currentDate}:\n\nhttps://bit.ly/ASII_2020\n\n1. ${name}\n2.\n3.\n4.\n5.\n6.\n7.\n8.\n9. \n10.\n11. \n12. \n13.\n14.`;
   };
 }
