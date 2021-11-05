@@ -82,7 +82,7 @@ export default class WhatsApp {
 
   _findTodayLatestFormMessage = (messages: proto.WebMessageInfo[]): string => {
     const linkRegex = /https:\/\/bit\.ly\/ASII_2020/;
-    const startOfToday = new Date().setUTCHours(-7, 0, 0, 0) / 1000;
+    const startOfToday = new Date().setHours(0, 0, 0, 0) / 1000;
 
     for (let idx = messages.length - 1; idx >= 0; idx--) {
       const { message, messageTimestamp } = messages[idx];

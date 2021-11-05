@@ -58,16 +58,15 @@ const createApp = (
       whatsapp: false,
     };
     let waMessage: string;
-    let screenshotPath: string;
 
     try {
       console.log(`filling the form ${formUrl} ...`);
-      screenshotPath = await fillHealthForm(
+      await fillHealthForm(
         browser,
         formUrl as string,
         questions as QuestionTemplate[],
         {
-          screenshot: process.env.NODE_ENV !== 'production' ? false : true,
+          screenshot: false,
           submit: process.env.NODE_ENV !== 'production' ? false : true,
         },
       );
@@ -78,14 +77,15 @@ const createApp = (
       console.log(`reporting form to email  ... ${targetEmail}`);
       await nodemailer.sendHealthFormEmail(
         targetEmail,
-        screenshotPath,
         questions,
       );
       status.email = true;
       console.log('reporting form to email success');
 
       // send report to whatsapp
-      console.log(`reporting form to whatsapp ${reportWhatsapp} as ${reportName} ...`);
+      console.log(
+        `reporting form to whatsapp ${reportWhatsapp} as ${reportName} ...`,
+      );
       waMessage = await reportToWA(reportWhatsapp, reportName);
       status.whatsapp = true;
       console.log('reporting form to whatsapp success');
@@ -105,7 +105,6 @@ const createApp = (
           form: {
             status: 'delivered',
             questions: questions,
-            screenshot: screenshotPath,
           },
         },
       };
@@ -122,7 +121,6 @@ const createApp = (
         form: {
           status: status.form ? 'delivered' : 'failed',
           questions: questions,
-          screenshot: screenshotPath,
         },
       };
       next(error);
@@ -144,6 +142,20 @@ const createApp = (
         whatsapp.close();
       }
       await whatsapp.connect();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // for testing purpose
+  app.post('/whatsapp/test', async (req, res, next) => {
+    try {
+      if (whatsapp.conn.state === 'close') {
+        await whatsapp.connect();
+      }
+
+      const messages = await whatsapp.loadMessages(req.body.jid, 20);
+      res.status(200).json(messages);
     } catch (error) {
       next(error);
     }
@@ -173,7 +185,7 @@ const createApp = (
         status: 'error',
         deliveryStatus: error.deliveryStatus || {},
       };
-      res.status(500).json();
+      res.status(500).json(description);
       nodemailer.sendError(process.env.DEVELOPER_EMAIL, error, description);
     }
   });

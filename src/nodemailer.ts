@@ -1,5 +1,3 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import * as nodemailer from 'nodemailer';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
 
@@ -12,7 +10,6 @@ export default class NodeMailer {
 
   async sendHealthFormEmail(
     targetEmail: string,
-    screenshotPath: string,
     healthForm: Record<string, unknown> = {},
   ): Promise<SMTPTransport.SentMessageInfo> {
     const currentDate = new Date().toLocaleDateString('en-GB', {
@@ -27,12 +24,6 @@ export default class NodeMailer {
       to: targetEmail,
       subject: `Fill Heatlh Form ${currentDate}`,
       html: `<p>The health form has been filled successfully <br/><br/> <pre>${JSON.stringify(healthForm, null, 4)}</pre></p>`,
-      attachments: [
-        {
-          filename: 'screenshot.png',
-          content: fs.createReadStream(path.join(__dirname, `../${screenshotPath}`)),
-        },
-      ],
     });
   }
 
@@ -44,9 +35,6 @@ export default class NodeMailer {
     console.log('reporting error to email');
 
     const currentTime = new Date().toLocaleString('en-GB', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric', 
       timeZone: 'Asia/Jakarta'
     });
 
