@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: healthform-cronjob-fatih
+  namespace: healthform
+  labels:
+    app: healthform
+spec:
+  schedule: '0 4 * * *'
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: healthform-cronjob
+              image: python:alpine3.14
+              imagePullPolicy: IfNotPresent
+              volumeMounts:
+                - name: jobscript
+                  mountPath: /opt/job.py
+                  subPath: job.py
+                - name: payload
+                  mountPath: /opt/payload
+              command: ['/bin/sh']
+              args:
+                - -c
+                - >
+                  pip install --no-cache-dir requests pytz;
+                  python3 /opt/job.py --first_date 2021-11-08 --n_shift 4 --wfh_weeks 1
+          volumes:
+            - name: jobscript
+              configMap:
+                name: healthform-jobscript
+            - name: payload
+              secret:
+                secretName: healthform-payload-fatih
+                items:
+                  - key: wfo.json
+                    path: wfo.json
+                  - key: wfh.json
+                    path: wfh.json
+                  - key: weekend.json
+                    path: weekend.json
