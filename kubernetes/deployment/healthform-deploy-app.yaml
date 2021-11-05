@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: healthform-service
+  namespace: healthform
+spec:
+  selector:
+    app: healthform
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: healthform-app
+  namespace: healthform
+  labels:
+    app: healthform
+spec:
+  selector:
+    matchLabels:
+      app: healthform
+  template:
+    metadata: 
+      labels:
+        app: healthform
+    spec:
+      hostNetwork: true
+      restartPolicy: Always
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: healthform
+        image: ghilman27/healthform:whatsapp-v1-armv7
+        imagePullPolicy: "Always"
+        ports:
+        - containerPort: 5000
+          protocol: TCP
+        volumeMounts:
+        - name: configs
+          mountPath: /usr/app/build/auth_info.json
+          subPath: auth_info.json
+        envFrom:
+          - secretRef:
+              name: healthform-env
+      volumes:
+      - name: configs
+        secret:
+          secretName: healthform-authinfo
+          items:
+            - key: auth_info.json
+              path: auth_info.json
